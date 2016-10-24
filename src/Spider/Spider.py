@@ -5,9 +5,15 @@ Created on 2016��10��18��
 @author: jansen_fan
 '''
 from Lib import getHtml
-import urllib,urllib2,re,cookielib
+import urllib,urllib2,re,cookielib,time
 from selenium import webdriver
 from bs4 import BeautifulSoup
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import NoSuchElementException
+
 def WPS(url):  #返回搜索结果的url
     rawWord = raw_input("Enter your input: ")
     Dict={'a':rawWord}
@@ -56,18 +62,37 @@ def searchHome(url):#根据home的url，返回所有子项url和name
     res=[]
     driver = webdriver.PhantomJS(executable_path='C:/PyProj/DRIVER/phantomjs/bin/phantomjs')
     driver.get(url)
-    html=driver.page_source
-    soup=BeautifulSoup(html,'lxml')
-    tempResult=soup.find_all('a',class_="file-handler")
-    for i in tempResult:
-        startUrlPos=str(i).find('http:')
-        endUrlPos=str(i).find('style=')
-        url=str(i)[startUrlPos:endUrlPos-2]
-        url.replace('amp;','')
-        startNamePos=str(i).find('title')+7#加7删除'title='的影响
-        endNamePos=str(i).find('unselectable')-2
-        name=str(i)[startNamePos:endNamePos]
-        res.append([name,url])
+    time.sleep(1)
+    pageNum=0
+    while(1): 
+        pageNum+=1
+        print '正在搜索第'+str(pageNum)+'页'
+        html=driver.page_source
+        soup=BeautifulSoup(html,'lxml')
+        tempResult=soup.find_all('a',class_="file-handler")
+        for i in tempResult:
+            startUrlPos=str(i).find('http:')
+            endUrlPos=str(i).find('style=')
+            url=str(i)[startUrlPos:endUrlPos-2]
+            url.replace('amp;','')
+            startNamePos=str(i).find('title')+7#加7删除'title='的影响
+            endNamePos=str(i).find('unselectable')-2
+            name=str(i)[startNamePos:endNamePos]
+            res.append([name,url])
+        if html.find('page-prev')==-1: #单页，没有下一页
+            break
+        if html.find('page-next mou-evt disabled')==-1:#判断是否有上一页，-1表示没有   
+            try:
+                time.sleep(1)
+                elem=driver.find_element_by_class_name('page-next')
+            except NoSuchElementException:
+                print "cant find the element"
+            elem.send_keys(Keys.ENTER)
+            element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "inifiniteListViewTips")))
+            time.sleep(4)  #等待页面加载结束
+        else:
+            break
+    driver.close()
     return res
 def isBDYurl(url):#判断是否pan或者yun格式
     if (str(url).find('pan.baidu.com')!=-1) or (str(url).find('yun.baidu.com')!=-1):
@@ -80,9 +105,11 @@ def getUk(url):  #根据url，返回相应的uk：字符串格式
     regExp=re.compile(reg)
     uk=re.findall(regExp,url)
     return uk[0] 
+def isUkNew(uk):
+    pass
 
 if __name__=='__main__':
-    
+    num=0
     cookie=urllib2.HTTPCookieProcessor(cookielib.CookieJar())
     opener=urllib2.build_opener(cookie)
     urllib2.install_opener(opener)
@@ -92,7 +119,7 @@ if __name__=='__main__':
     url=['http://www.wangpansou.cn/s.php?wp=0&ty=gn&op=gn&q=']
     urlR=WPS(url[0])
     print urlR
-    f=open('f:/PyProj/1.txt','w')
+    f=open('c:/PyProj/1.txt','w')
     for i in urlR:
         if isBDYurl(i):
             f.write(str(i))
@@ -104,7 +131,7 @@ if __name__=='__main__':
     '''
     urlHome1='http://pan.baidu.com/share/home?uk='
     urlHome2='#category/type=0'
-    fUk=open('f:/PyProj/ukList.txt','a')
+    fUk=open('c:/PyProj/ukList.txt','a')
     for i in urlR:
         if isBDYurl(i):
             uk=getUk(i)
@@ -117,16 +144,18 @@ if __name__=='__main__':
                 resList=searchHome(urlHome)
             except urllib2.HTTPError as err:
                 print err
-            f=open('f:/PyProj/'+uk+'.txt','w')
+            f=open('C:/PyProj/'+uk+'.txt','w')
             for j in resList:
+                num=num+1
                 f.write(j[0])
                 f.write('\n')
                 f.write(j[1])
                 f.write('\n')
             f.close()
             print '用户'+uk+':搜索完毕'
+            print '当前收录量：'+str(num)
     fUk.close()
-    print '全部搜索完毕'
+    print '本次搜索结果搜录完毕\n共收录'+str(num)+'个链接'
                 
     
     
