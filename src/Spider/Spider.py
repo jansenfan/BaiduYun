@@ -13,7 +13,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
-
+import  MySQLdb as mdb
 def WPS(url):  #返回搜索结果的url
     rawWord = raw_input("Enter your input: ")
     Dict={'a':rawWord}
@@ -35,7 +35,7 @@ def WPS(url):  #返回搜索结果的url
             urlR=urlR+items
         except urllib2.HTTPError as err:
             if err.code==404:
-                print "已搜索完毕"
+                print "404：已搜索完毕"
                 break
     return urlR
 
@@ -75,9 +75,13 @@ def searchHome(url):#根据home的url，返回所有子项url和name
             endUrlPos=str(i).find('style=')
             url=str(i)[startUrlPos:endUrlPos-2]
             url.replace('amp;','')
+            if len(url)>150:
+                url=url[:145]
             startNamePos=str(i).find('title')+7#加7删除'title='的影响
             endNamePos=str(i).find('unselectable')-2
             name=str(i)[startNamePos:endNamePos]
+            if len(name)>100:
+                name='文件名过长'
             res.append([name,url])
         if html.find('page-prev')==-1: #单页，没有下一页
             break
@@ -113,6 +117,17 @@ if __name__=='__main__':
     cookie=urllib2.HTTPCookieProcessor(cookielib.CookieJar())
     opener=urllib2.build_opener(cookie)
     urllib2.install_opener(opener)
+    con = mdb.connect(host = 'localhost',user = 'root',passwd = '123456',charset="utf8")
+    cur = con.cursor()
+    con.select_db('baiduyun')
+    '''
+    cur.execute(sqlselect)
+    tablerows=cur.fetchall()
+    cur.execute('drop table if exists uklist')
+    cur.execute('drop table if exists urllist')
+    cur.execute('create table uklist(indez int not null  primary key auto_increment,uk varchar(20))') 
+    cur.execute('create table urllist(indez int not null  primary key auto_increment,title varchar(100),url varchar(150),uk varchar(20))')
+    '''
     '''
     #第一步：网盘搜结果呈现
     '''
@@ -131,30 +146,30 @@ if __name__=='__main__':
     '''
     urlHome1='http://pan.baidu.com/share/home?uk='
     urlHome2='#category/type=0'
-    fUk=open('c:/PyProj/ukList.txt','a')
     for i in urlR:
         if isBDYurl(i):
             uk=getUk(i)
-            print '用户'+uk+':开始搜索'
-            fUk.write(uk)
-            fUk.write('\n')
-            resList=[]
-            urlHome=urlHome1+uk+urlHome2
-            try:
-                resList=searchHome(urlHome)
-            except urllib2.HTTPError as err:
-                print err
-            f=open('C:/PyProj/'+uk+'.txt','w')
-            for j in resList:
-                num=num+1
-                f.write(j[0])
-                f.write('\n')
-                f.write(j[1])
-                f.write('\n')
-            f.close()
-            print '用户'+uk+':搜索完毕'
-            print '当前收录量：'+str(num)
-    fUk.close()
+            print uk
+            if cur.execute('select uk from uklist where uk=%s',uk)==0: #判断是否已经收录此uk
+                cur.execute('insert into uklist(uk) values(%s)',uk)
+                print '用户'+uk+':开始搜索'
+                resList=[]
+                urlHome=urlHome1+uk+urlHome2
+                try:
+                    resList=searchHome(urlHome)
+                except urllib2.HTTPError as err:
+                    print err
+                for j in resList:
+                    num=num+1
+                    cur.execute('insert into urllist(title,url,uk) values(%s,%s,%s)',[j[0],j[1],uk])
+                print '用户'+uk+':搜索完毕'
+                print '当前收录量：'+str(num)
+            else:
+                print 'uk已收录，跳过'
+    
+    con.commit()
+    cur.close()
+    con.close()
     print '本次搜索结果搜录完毕\n共收录'+str(num)+'个链接'
                 
     
