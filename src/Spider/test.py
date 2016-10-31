@@ -14,7 +14,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 import  MySQLdb as mdb
-import chardet,random
+import chardet
+import threading
 
 def WPS(url,rawWord):  #return uk and password  【[url,uk],[url,uk]...,[url,uk]】
     #rawWord = raw_input("Enter your input: ")
@@ -166,9 +167,12 @@ def isUkNew(uk):
     pass
 
 def keyWordLib(): #return hot keyword[list]
-    hotUrl=['http://www.bdybbs.com/top/','http://top.baidu.com/category?c=10','http://xiazai.zol.com.cn/download_order/soft_order.html']
-    reg=[r'target="_blank">(.+?)</a></li>',r'<a target="_blank" title="(.+?)"','target="_blank" class="title" title="(.+?)"']
-    charsetUrl=['utf8','gb2312','gbk']
+    hotUrl=['http://xiazai.zol.com.cn/download_order/soft_order.html']
+    reg=['target="_blank" class="title" title="(.+?)"']
+    charsetUrl=['gbk']
+    #hotUrl=['http://www.bdybbs.com/top/','http://top.baidu.com/category?c=10','http://xiazai.zol.com.cn/download_order/soft_order.html']
+    #reg=[r'target="_blank">(.+?)</a></li>',r'<a target="_blank" title="(.+?)"','target="_blank" class="title" title="(.+?)"']
+    #charsetUrl=['utf8','gb2312','gbk']
     hotList=[]
     for i in range(len(hotUrl)):
         html=getHtml(hotUrl[i])
@@ -185,18 +189,17 @@ def keyWordLib(): #return hot keyword[list]
     return hotList
 
 
-def doubanMovieList(tag):
-    url1='http://movie.douban.com/tag/'
+def doubanMovieTag(tag):
+    url1='https://movie.douban.com/tag/'
     url2='?start='
     url3='&type=T'
-    
+    global doubanList
     reg=r'data-total-page="(.+?)">'
     regExp=re.compile(reg)
     regItem=r'title="(.+?)">'
     regExpItem=re.compile(regItem)
-    doubanList=[]
-    #time.sleep(5)
-    Dict={'a':str(tag)}
+    resList=[]
+    Dict={'a':tag}
     temp=urllib.urlencode(Dict)
     keyWord=temp[2:]
     urlIni=url1+keyWord
@@ -212,9 +215,9 @@ def doubanMovieList(tag):
         url=url1+keyWord+url2+str(20*j)+url3
         htmlItem=getHtml(url)
         items=re.findall(regExpItem,htmlItem)
-        doubanList=doubanList+items
-        time.sleep(random.randint(1,4))
-    return doubanList
+        resList=resList+items
+        time.sleep(2)
+    doubanList=doubanList+resList
 
 
 
@@ -228,52 +231,75 @@ if __name__=='__main__':
     cur = con.cursor()
     con.select_db('baiduyun')
     
-    #Tags=['爱情','喜剧','动画','剧情','科幻','动作','经典','悬疑','青春','犯罪','惊悚','文艺','搞笑','纪录片','励志','恐怖','战争','短片','魔幻','黑色幽默','传记','情色','感人','暴力','动画短片','家庭','音乐','童年','浪漫','黑帮','女性' '同志','史诗','童话','烂片','cult']
-    Tags=['剧情','科幻','动作','经典','悬疑','青春','犯罪','惊悚','文艺','搞笑','纪录片','励志','恐怖','战争','短片','魔幻','黑色幽默','传记','情色','感人','暴力','动画短片','家庭','音乐','童年','浪漫','黑帮','女性' '同志','史诗','童话','烂片','cult']
     url=['http://www.wangpansou.cn/s.php?wp=0&ty=gn&op=gn&q=']
     urlHome1='http://pan.baidu.com/share/home?uk='
     urlHome2='#category/type=0'
     
-    #hotList=keyWordLib()
-    #doubanList=doubanMovieList()
+    hotList=keyWordLib()
+    doubanList=[]
+    #doubanList=doubanMovieList(tag)
     #print len(doubanList)
     #doubanList=list(set(doubanList)) #delete duplicate items
     
-    for tag in Tags:
-        doubanList=doubanMovieList(tag)
-        print len(doubanList)
-        #doubanList=list(set(doubanList)) #delete duplicate items
-        for item in doubanList:
-            print '当前关键词：'+item
-            urlR=WPS(url[0],item)
-            for i in urlR:
-                if isBDYurl(i[0]):
-                    i[0]=i[0].replace('amp;','')
-                    uk=getUk(i[0])
-                    print '初始地址:'+i[0]
-                    print '初始密码:'+i[1]
-                    if uk=='null':
-                        uk=handlePw(i[0],i[1])
-                    print '用户编号:'+uk
-                    if uk!='null':
-                        if cur.execute('select uk from uklist where uk=%s',uk)==0: #判断是否已经收录此uk
-                            cur.execute('insert into uklist(uk) values(%s)',uk)
-                            print '用户'+uk+':开始搜索'
-                            resList=[]
-                            urlHome=urlHome1+uk+urlHome2
-                            try:
-                                resList=searchHome(urlHome)
-                            except urllib2.HTTPError as err:
-                                print err
-                            for j in resList:
-                                num=num+1
-                                cur.execute('insert into urllist(title,url,uk) values(%s,%s,%s)',[j[0],j[1],uk])
-                            print '用户'+uk+':搜索完毕'
-                            print '当前收录量：'+str(num)
-                        else:
-                            print 'uk已收录，跳过'
-            con.commit()
-            print '本次搜索结果搜录完毕\n共收录'+str(num)+'个链接'
+    def multiThreads():
+        Tags=['爱情','喜剧','动画','剧情','科幻','动作','经典','悬疑','青春','犯罪','惊悚','文艺','搞笑','纪录片','励志','恐怖','战争','短片','魔幻','黑色幽默','传记','情色','感人','暴力','动画短片','家庭','音乐','童年','浪漫','黑帮','女性' '同志','史诗','童话','烂片','cult']
+    
+        threads=[]
+        #multiple threads
+        for tag in Tags:
+            t=threading.Thread(target=doubanMovieTag,args=(str(tag),))
+            threads.append(t)
+        for i in range(len(Tags)):
+            threads[i].setDaemon(True)
+            threads[i].start()
+        for i in range(len(Tags)):
+            threads[i].join()
+    
+    
+    multiThreads()
+    print len(doubanList)
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    '''
+    for hot in hotList:
+        print '当前关键词：'+hot
+        urlR=WPS(url[0],hot)
+        for i in urlR:
+            if isBDYurl(i[0]):
+                i[0]=i[0].replace('amp;','')
+                uk=getUk(i[0])
+                print '初始地址:'+i[0]
+                print '初始密码:'+i[1]
+                if uk=='null':
+                    uk=handlePw(i[0],i[1])
+                print '用户编号:'+uk
+                if uk!='null':
+                    if cur.execute('select uk from uklist where uk=%s',uk)==0: #判断是否已经收录此uk
+                        cur.execute('insert into uklist(uk) values(%s)',uk)
+                        print '用户'+uk+':开始搜索'
+                        resList=[]
+                        urlHome=urlHome1+uk+urlHome2
+                        try:
+                            resList=searchHome(urlHome)
+                        except urllib2.HTTPError as err:
+                            print err
+                        for j in resList:
+                            num=num+1
+                            cur.execute('insert into urllist(title,url,uk) values(%s,%s,%s)',[j[0],j[1],uk])
+                        print '用户'+uk+':搜索完毕'
+                        print '当前收录量：'+str(num)
+                    else:
+                        print 'uk已收录，跳过'
+        con.commit()
+        print '本次搜索结果搜录完毕\n共收录'+str(num)+'个链接'
     
     cur.close()
     con.close()
+    '''
