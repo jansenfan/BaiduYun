@@ -16,17 +16,17 @@ from selenium.common.exceptions import NoSuchElementException
 import  MySQLdb as mdb
 import random
 import threading
-def WPS(url,rawWord):  #return uk and password  【[url,uk],[url,uk]...,[url,uk]】
+def WPS(rawWord):  #return uk and password  【[url,uk],[url,uk]...,[url,uk]】
     #rawWord = raw_input("Enter your input: ")
     Dict={'a':rawWord}
     temp=urllib.urlencode(Dict)
     keyWord=temp[2:]
-    
+    urlIni='http://www.wangpansou.cn/s.php?wp=0&ty=gn&op=gn&q='
     startPage=0
     urlR=[]
     while(1):
         try:
-            urlS=url+keyWord+'&start='+str(startPage)
+            urlS=urlIni+keyWord+'&start='+str(startPage)
             startPage=startPage+10
             print urlS
             print '网盘搜结果检索第'+str(startPage/10)+'页'
@@ -54,26 +54,6 @@ def WPS(url,rawWord):  #return uk and password  【[url,uk],[url,uk]...,[url,uk]
                 print "已搜索完毕"
                 break
     return urlR
-
-def isPageNull(url):
-    try:
-        response=urllib2.urlopen(i)
-    except urllib2.HTTPError as err:
-        if err.code==403:
-            print "wait for a while"
-    htmlT=response.read()
-    reg=r'<title>(.+?)_'
-    regExp=re.compile(reg)
-    title=re.findall(regExp,htmlT)
-    if title==[]:
-        return 1
-    else:
-        return 0
-
-def getHtmlByCookie(url):
-    response=urllib2.urlopen(url)
-    html=response.read()
-    return html
 
 def searchHome(url):#根据home的url，返回所有子项url和name
     res=[]
@@ -212,110 +192,28 @@ def doubanMovieList(tag):
         time.sleep(random.randint(1,4))
     return doubanList
 
-def keyModule(items,sleepTime):
-    time.sleep(sleepTime)
-    for item in items:
-        print '当前关键词：'+item
-        urlR=WPS(url[0],item)
-        num=0
-        for i in urlR:
-            if isBDYurl(i[0]):
-                i[0]=i[0].replace('amp;','')
-                uk=getUk(i[0])
-                print '初始地址:'+i[0]
-                print '初始密码:'+i[1]
-                if uk=='null':
-                    uk=handlePw(i[0],i[1])
-                print '用户编号:'+uk
-                if uk!='null':
-                    if cur.execute('select uk from uklist whe    re uk=%s',uk)==0: #判断是否已经收录此uk
-                        cur.execute('insert into uklist(uk) values(%s)',uk)
-                        print '用户'+uk+':开始搜索'
-                        resList=[]
-                        urlHome=urlHome1+uk+urlHome2
-                        try:
-                            resList=searchHome(urlHome)
-                        except urllib2.HTTPError as err:
-                            print err
-                        for j in resList:
-                            num=num+1
-                            cur.execute('insert into urllist(title,url,uk) values(%s,%s,%s)',[j[0],j[1],uk])
-                        print '用户'+uk+':搜索完毕'
-                        print '当前收录量：'+str(num)
-                    else:
-                        print 'uk已收录，跳过'
-            con.commit()
-            print '本次搜索结果搜录完毕\n共收录'+str(num)+'个链接'
-
 if __name__=='__main__':
-    #num=0
     cookie=urllib2.HTTPCookieProcessor(cookielib.CookieJar())
     opener=urllib2.build_opener(cookie)
     urllib2.install_opener(opener)
     con = mdb.connect(host = 'localhost',user = 'root',passwd = '123456',charset="utf8")
-    cur = con.cursor()
     con.select_db('baiduyun')
+    cur = con.cursor()
     #cur.execute('CREATE TABLE uklist(id int NOT NULL AUTO_INCREMENT PRIMARY key,uk varchar(20))')
     #cur.execute('CREATE TABLE urllist(id int NOT NULL AUTO_INCREMENT PRIMARY key,title varchar(100),url varchar(150),uk varchar(20))')
-    
-    
     #Tags=['爱情','喜剧','动画','剧情','科幻','动作','经典','悬疑','青春','犯罪','惊悚','文艺','搞笑','纪录片','励志','恐怖','战争','短片','魔幻','黑色幽默','传记','情色','感人','暴力','动画短片','家庭','音乐','童年','浪漫','黑帮','女性' '同志','史诗','童话','烂片','cult']
-    Tags=['cult','搞笑','纪录片','励志','恐怖','战争','短片','魔幻','黑色幽默','传记','情色','感人','暴力','动画短片','家庭','音乐','童年','浪漫','黑帮','女性' '同志','史诗','童话','烂片']
-    url=['http://www.wangpansou.cn/s.php?wp=0&ty=gn&op=gn&q=']
+    Tags=['搞笑','纪录片','励志','恐怖','战争','短片','魔幻','黑色幽默','传记','情色','感人','暴力','动画短片','家庭','音乐','童年','浪漫','黑帮','女性' '同志','史诗','童话','烂片']
+    #url=['http://www.wangpansou.cn/s.php?wp=0&ty=gn&op=gn&q=']
     urlHome1='http://pan.baidu.com/share/home?uk='
     urlHome2='#category/type=0'
-    
-    pNum=5 # threads number
+
     
     for tag in Tags:
         doubanList=doubanMovieList(tag)
-        threads=[]
-        subTitleList=[]
-        for i in range(pNum):
-            subTitleList.append([])
-        lenTags=len(doubanList)
-        if lenTags==0:
-            break
-        remainderTags=lenTags%pNum
-        quotientTags=lenTags/pNum
-        for i in range(lenTags/pNum):
-            subTitleList[0].append(doubanList[pNum*i])
-            subTitleList[1].append(doubanList[pNum*i+1])
-            subTitleList[2].append(doubanList[pNum*i+2])
-            subTitleList[3].append(doubanList[pNum*i+3])
-            subTitleList[4].append(doubanList[pNum*i+4])
-        if (lenTags%pNum)!=0:
-            for i in range(remainderTags):
-                subTitleList[i].append(doubanList[pNum*quotientTags+i])
-        t0=threading.Thread(target=keyModule,args=(subTitleList[0],0))
-        threads.append(t0)
-        t1=threading.Thread(target=keyModule,args=(subTitleList[1],100))
-        threads.append(t1)
-        t2=threading.Thread(target=keyModule,args=(subTitleList[2],200))
-        threads.append(t2)
-        t3=threading.Thread(target=keyModule,args=(subTitleList[3],300))
-        threads.append(t3)
-        t4=threading.Thread(target=keyModule,args=(subTitleList[4],400))
-        threads.append(t4)
-        
-        for t in threads:
-            t.setDaemon(True)
-            t.start()
-        for t in threads:
-            t.join() #指定的线程加入到当前线程,可以将两个交替执行的线程合并为顺序执行的线程
-    
-    #hotList=keyWordLib()
-    #doubanList=doubanMovieList()
-    #print len(doubanList)
-    #doubanList=list(set(doubanList)) #delete duplicate items
-    '''
-    for tag in Tags:
-        doubanList=doubanMovieList(tag)
-        print len(doubanList)
-        #doubanList=list(set(doubanList)) #delete duplicate items
         for item in doubanList:
             print '当前关键词：'+item
-            urlR=WPS(url[0],item)
+            urlR=WPS(item)
+            num=0
             for i in urlR:
                 if isBDYurl(i[0]):
                     i[0]=i[0].replace('amp;','')
@@ -342,8 +240,8 @@ if __name__=='__main__':
                             print '当前收录量：'+str(num)
                         else:
                             print 'uk已收录，跳过'
-            con.commit()
-            print '本次搜索结果搜录完毕\n共收录'+str(num)+'个链接'
-    '''
+                con.commit()
+                print '本次搜索结果搜录完毕\n共收录'+str(num)+'个链接'
+            
     cur.close()
     con.close()
