@@ -98,12 +98,11 @@ def doubanMovieList(tag):
 
 
 
-def source(Q1,Q3):
+def source(Q1):
     #for tag in Tags:
-    startNum=24895
+    startNum=34000
     paceNum=500
-    while(Q3.empty()==True):
-        #resList=[]
+    while True:
         cur=con.cursor()
         cur.execute('select * from titlelist where id>=%s and id<%s',[startNum,(startNum+paceNum)])
         items=cur.fetchall()
@@ -114,7 +113,7 @@ def source(Q1,Q3):
             print urlR
             for j in urlR:
                 Q1.put(j)
-            time.sleep(random.randint(10,30))
+            time.sleep(random.randint(15,30))
         startNum+=paceNum
 
 '''
@@ -148,15 +147,17 @@ def findUk(Q1,Q2):
                 Q2.put(uk)
 
 def isUkNew(Q2,Q3):
-    while (datetime.datetime.now().second==0):
-        cur = con.cursor()
-        while(Q2.empty()!=True):
-            uk=Q2.get()
-            if cur.execute('select uk from uklist where uk=%s',uk)==0: #判断是否已经收录此uk
-                cur.execute('insert into uklist(uk) values(%s)',uk)
-                Q3.put(uk)
-                print 'New uk : '+uk
-        cur.close()
+    while True:
+        if(datetime.datetime.now().minute%3!=0):
+            cur = con.cursor()
+            while(Q2.empty()!=True):
+                uk=Q2.get()
+                if cur.execute('select uk from uklist where uk=%s',uk)==0: #判断是否已经收录此uk
+                    cur.execute('insert into uklist(uk) values(%s)',uk)
+                    Q3.put(uk)
+                    print 'New uk : '+uk
+            cur.close()
+            time.sleep(30)
 
 def searchHome(Q3,Q4):
     while True:
@@ -205,16 +206,18 @@ def searchHome(Q3,Q4):
 
 def writeMySQL(Q4):
     num=0
-    while (datetime.datetime.now().second==45 & datetime.datetime.now().second%2==0):
-        cur = con.cursor()
-        while(not Q4.empty()):
-            item=Q4.get()
-            num=num+1
-            cur.execute('insert into urllist(title,url,uk) values(%s,%s,%s)',[item[0],item[1],item[2]])
-        cur.close()
-        con.commit()
-        
-        print '当前收录量：'+str(num)
+    while True:
+        if(datetime.datetime.now().minute%3==0):
+            cur = con.cursor()
+            while(not Q4.empty()):
+                item=Q4.get()
+                num=num+1
+                cur.execute('insert into urllist(title,url,uk) values(%s,%s,%s)',[item[0],item[1],item[2]])
+            cur.close()
+            con.commit()
+            
+            print '当前收录量：'+str(num)
+            time.sleep(60)
     
 def queueSize(Q1,Q2,Q3,Q4):
     while True:
@@ -237,7 +240,7 @@ if __name__=='__main__':
 
     threads=[]
     
-    t1=threading.Thread(target=source,args=(Q1,Q3,))
+    t1=threading.Thread(target=source,args=(Q1,))
     threads.append(t1)
     
     t2=threading.Thread(target=findUk,args=(Q1,Q2,))
