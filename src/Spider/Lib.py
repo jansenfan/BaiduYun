@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 import urllib2,re,cookielib,httplib,socket,urllib,random,time
-
+from bs4 import BeautifulSoup
 header={'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/34.0.1847.137 Safari/537.36 LBBROWSER'  }  
 timeOut=50
 def getHtml(url):
@@ -14,7 +14,7 @@ def getHtml(url):
         html=str(e)
     return html
 
-
+proxyes={'http:':"某代理IP地址:代理的端口"}
 def isPageNull(url):
     try:
         response=urllib2.urlopen(url)
@@ -119,3 +119,24 @@ def WPS(rawWord):  #return uk and password  【[url,uk],[url,uk]...,[url,uk]】
                 print "已搜索完毕"
                 break
     return urlR
+
+def isAlive(ip,port):
+        proxy={'http':"http://"+ip+':'+port}
+        print proxy
+        header={'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/34.0.1847.137 Safari/537.36 LBBROWSER'  }  
+        proxy_support=urllib2.ProxyHandler(proxy)
+        opener=urllib2.build_opener(proxy_support)
+        urllib2.install_opener(opener)
+        test_url="http://www.qq.com"
+        req=urllib2.Request(test_url,headers=header)
+        try:
+            resp=urllib2.urlopen(req,timeout=10)
+            if resp.code==200:
+                print "work"
+                return True
+            else:
+                print "not work"
+                return False
+        except :
+            print "Not work"
+            return False

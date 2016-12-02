@@ -100,7 +100,7 @@ def doubanMovieList(tag):
 
 def source(Q1):
     #for tag in Tags:
-    startNum=34000
+    startNum=34460
     paceNum=500
     while True:
         cur=con.cursor()
@@ -263,7 +263,10 @@ if __name__=='__main__':
     
     t8=threading.Thread(target=queueSize,args=(Q1,Q2,Q3,Q4,))
     threads.append(t8)
-    
+    '''
+    t9=threading.Thread(target=searchHome,args=(Q3,Q4,))
+    threads.append(t9)
+    '''
     for t in threads:
         t.setDaemon(True)
         t.start()
