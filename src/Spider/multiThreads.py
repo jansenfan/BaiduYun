@@ -10,7 +10,7 @@ import MySQLdb as mdb
 from Queue import Queue
 from random import sample
 from bs4 import BeautifulSoup
-from Lib import getHtml,Bing
+from Lib import getHtml,Bing,S_Sobaidupan,S_Tebaidu
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
@@ -97,10 +97,10 @@ def doubanMovieList(tag):
     return doubanList
 
 
-
+'''
 def source(Q1):
     #for tag in Tags:
-    startNum=34460
+    startNum=36065  
     paceNum=500
     while True:
         cur=con.cursor()
@@ -113,24 +113,10 @@ def source(Q1):
             print urlR
             for j in urlR:
                 Q1.put(j)
-            time.sleep(random.randint(15,30))
+            time.sleep(random.randint(30,45))
         startNum+=paceNum
 
-'''
-def source(Q1):
-    startID=2627
-    endID=startID+1000
-    for n in range(2):
-        cur=con.cursor()
-        cur.execute('select * from checklist where id>%s and id<%s',[startID,endID])
-        items=cur.fetchall()
-        for i in items:
-            i=list(i)
-            Q1.put(i[1:])
-        startID+=1000
-        endID+=1000
-        cur.close()
-'''               
+           
 def findUk(Q1,Q2):
     while True:
         item=Q1.get()
@@ -146,6 +132,37 @@ def findUk(Q1,Q2):
             if uk!='null':
                 Q2.put(uk)
 
+
+
+
+
+
+'''
+
+def source(Q2):
+    #for tag in Tags:
+    startNum=37068  
+    paceNum=500
+    num=0
+    funcList=[S_Tebaidu,S_Sobaidupan]
+    while True:
+        cur=con.cursor()
+        cur.execute('select * from titlelist where id>=%s and id<%s',[startNum,(startNum+paceNum)])
+        items=cur.fetchall()
+        cur.close()
+        for i in items:
+            num=num+1
+            sel=num%2
+            print i[1]
+            urlR=funcList[sel](i[1])
+            print urlR
+            for j in urlR:
+                Q2.put(j)
+            time.sleep(random.randint(300,600))
+        startNum+=paceNum
+
+
+
 def isUkNew(Q2,Q3):
     while True:
         if(datetime.datetime.now().minute%3!=0):
@@ -158,6 +175,9 @@ def isUkNew(Q2,Q3):
                     print 'New uk : '+uk
             cur.close()
             time.sleep(30)
+
+
+
 
 def searchHome(Q3,Q4):
     while True:
@@ -211,8 +231,12 @@ def writeMySQL(Q4):
             cur = con.cursor()
             while(not Q4.empty()):
                 item=Q4.get()
+                url=item[1]
+                if url.find("http://pan.baidu.com/s/")==-1:
+                    continue
+                url=url[23:]
                 num=num+1
-                cur.execute('insert into urllist(title,url,uk) values(%s,%s,%s)',[item[0],item[1],item[2]])
+                cur.execute('insert into taglist(title,url,uk) values(%s,%s,%s)',[item[0],url,item[2]])
             cur.close()
             con.commit()
             
@@ -240,13 +264,13 @@ if __name__=='__main__':
 
     threads=[]
     
-    t1=threading.Thread(target=source,args=(Q1,))
+    t1=threading.Thread(target=source,args=(Q2,))
     threads.append(t1)
-    
-    t2=threading.Thread(target=findUk,args=(Q1,Q2,))
+
+    t2=threading.Thread(target=isUkNew,args=(Q2,Q3,))
     threads.append(t2)
     
-    t3=threading.Thread(target=isUkNew,args=(Q2,Q3,))
+    t3=threading.Thread(target=searchHome,args=(Q3,Q4,))
     threads.append(t3)
     
     t4=threading.Thread(target=searchHome,args=(Q3,Q4,))
@@ -255,21 +279,15 @@ if __name__=='__main__':
     t5=threading.Thread(target=searchHome,args=(Q3,Q4,))
     threads.append(t5)
     
-    t6=threading.Thread(target=searchHome,args=(Q3,Q4,))
+    t6=threading.Thread(target=writeMySQL,args=(Q4,))
     threads.append(t6)
     
-    t7=threading.Thread(target=writeMySQL,args=(Q4,))
+    t7=threading.Thread(target=queueSize,args=(Q1,Q2,Q3,Q4,))
     threads.append(t7)
     
-    t8=threading.Thread(target=queueSize,args=(Q1,Q2,Q3,Q4,))
-    threads.append(t8)
-    '''
-    t9=threading.Thread(target=searchHome,args=(Q3,Q4,))
-    threads.append(t9)
-    '''
     for t in threads:
         t.setDaemon(True)
         t.start()
 
-for t in threads:
-    t.join()
+    for t in threads:
+        t.join()

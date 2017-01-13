@@ -14,7 +14,6 @@ def getHtml(url):
         html=str(e)
     return html
 
-proxyes={'http:':"某代理IP地址:代理的端口"}
 def isPageNull(url):
     try:
         response=urllib2.urlopen(url)
@@ -140,3 +139,55 @@ def isAlive(ip,port):
         except :
             print "Not work"
             return False
+    
+def S_Tebaidu(rawWord):
+    Dict={'a':rawWord}
+    temp=urllib.urlencode(Dict)
+    keyWord=temp[2:]
+    
+    ukList=[]
+    pageNum=0
+    
+    url1='http://www.tebaidu.com/search.asp?r=0&wd='
+    url2='&p=&page=' #followed by page number
+    url=url1+keyWord
+    reg=r'user-(.*?)-1'
+    regExp=re.compile(reg)
+    html=getHtml(url)
+    tempList=re.findall(regExp,html)
+    ukList=ukList+tempList
+    while(html.find("下一页")!=-1):
+        pageNum=pageNum+1
+        url=url1+keyWord+url2+str(pageNum)
+        html=getHtml(url)
+        tempList=re.findall(regExp,html)
+        ukList=ukList+tempList
+    setList=set(ukList)
+    resList=list(setList)
+    return resList
+
+def S_Sobaidupan(rawWord):
+    Dict={'a':rawWord}
+    temp=urllib.urlencode(Dict)
+    keyWord=temp[2:]
+    
+    ukList=[]
+    pageNum=0
+    
+    url1='http://www.sobaidupan.com/search.asp?r=0&wd='
+    url2='&p=&page=' #followed by page number
+    url=url1+keyWord
+    reg=r'user-(.*?)-1'
+    regExp=re.compile(reg)
+    html=getHtml(url)
+    tempList=re.findall(regExp,html)
+    ukList=ukList+tempList
+    while(html.find("下一页")!=-1):
+        pageNum=pageNum+1
+        url=url1+keyWord+url2+str(pageNum)
+        html=getHtml(url)
+        tempList=re.findall(regExp,html)
+        ukList=ukList+tempList
+    setList=set(ukList)
+    resList=list(setList)
+    return resList
