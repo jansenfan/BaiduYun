@@ -18,7 +18,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 
-
+'''
 def isBDYurl(url):#判断是否pan或者yun格式
     if (str(url).find('pan.baidu.com')!=-1) or (str(url).find('yun.baidu.com')!=-1):
         return 1
@@ -96,7 +96,7 @@ def doubanMovieList(tag):
         time.sleep(random.randint(1,4))
     return doubanList
 
-
+'''
 '''
 def source(Q1):
     #for tag in Tags:
@@ -141,7 +141,7 @@ def findUk(Q1,Q2):
 
 def source(Q2):
     #for tag in Tags:
-    startNum=37068  
+    startNum=38941 
     paceNum=500
     num=0
     funcList=[S_Tebaidu,S_Sobaidupan]
@@ -158,7 +158,8 @@ def source(Q2):
             print urlR
             for j in urlR:
                 Q2.put(j)
-            time.sleep(random.randint(300,600))
+            #time.sleep(random.randint(120,600))
+            time.sleep(random.randint(20,60))
         startNum+=paceNum
 
 
@@ -171,13 +172,11 @@ def isUkNew(Q2,Q3):
                 uk=Q2.get()
                 if cur.execute('select uk from uklist where uk=%s',uk)==0: #判断是否已经收录此uk
                     cur.execute('insert into uklist(uk) values(%s)',uk)
-                    Q3.put(uk)
+                    #Q3.put(uk)
                     print 'New uk : '+uk
+            
             cur.close()
             time.sleep(30)
-
-
-
 
 def searchHome(Q3,Q4):
     while True:
@@ -250,6 +249,7 @@ def queueSize(Q1,Q2,Q3,Q4):
         print 'Q3 size : '+str(Q3.qsize())
         print 'Q4 size : '+str(Q4.qsize())
         time.sleep(60)
+        con.commit()
 
 Q1=Queue()
 Q2=Queue()
@@ -261,7 +261,11 @@ Tags=['动画短片','家庭','音乐','童年','浪漫','黑帮','女性']
 if __name__=='__main__':
     con = mdb.connect(host = 'localhost',user = 'root',passwd = '123456',charset="utf8")
     con.select_db('baiduyun')
-
+    
+    if(datetime.datetime.now().minute%3==0):
+        print "可能冲突，等待60s"
+        time.sleep(60)
+        
     threads=[]
     
     t1=threading.Thread(target=source,args=(Q2,))
@@ -269,7 +273,7 @@ if __name__=='__main__':
 
     t2=threading.Thread(target=isUkNew,args=(Q2,Q3,))
     threads.append(t2)
-    
+    '''
     t3=threading.Thread(target=searchHome,args=(Q3,Q4,))
     threads.append(t3)
     
@@ -281,7 +285,7 @@ if __name__=='__main__':
     
     t6=threading.Thread(target=writeMySQL,args=(Q4,))
     threads.append(t6)
-    
+    '''
     t7=threading.Thread(target=queueSize,args=(Q1,Q2,Q3,Q4,))
     threads.append(t7)
     

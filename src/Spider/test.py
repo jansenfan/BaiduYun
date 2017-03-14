@@ -63,6 +63,7 @@ def searchHome(Q3,Q4):
         for item in res:
             Q4.put([item[0],item[1],uk])
 
+
 def writeMySQL(Q4):
     num=0
     while True:
@@ -70,8 +71,12 @@ def writeMySQL(Q4):
             cur = con.cursor()
             while(not Q4.empty()):
                 item=Q4.get()
+                url=item[1]
+                if url.find("http://pan.baidu.com/s/")==-1:
+                    continue
+                url=url[23:]
                 num=num+1
-                cur.execute('insert into urllist(title,url,uk) values(%s,%s,%s)',[item[0],item[1],item[2]])
+                cur.execute('insert into taglist(title,url,uk) values(%s,%s,%s)',[item[0],url,item[2]])
             cur.close()
             con.commit()
             
@@ -93,7 +98,7 @@ Q4=Queue()
 urlHome1='http://pan.baidu.com/share/home?uk='
 urlHome2='#category/type=0'
 if __name__=='__main__':
-    startNum=99600
+    startNum=147812
     con = mdb.connect(host = 'localhost',user = 'root',passwd = '123456',charset="utf8")
     con.select_db('baiduyun')
     cur=con.cursor()

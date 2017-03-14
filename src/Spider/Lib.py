@@ -1,8 +1,8 @@
 # -*- coding:utf-8 -*-
-import urllib2,re,cookielib,httplib,socket,urllib,random,time
+import urllib2,re,cookielib,httplib,socket,urllib,random,time,requests
 from bs4 import BeautifulSoup
 header={'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/34.0.1847.137 Safari/537.36 LBBROWSER'  }  
-timeOut=50
+timeOut=8
 def getHtml(url):
     request=urllib2.Request(url,headers=header)
     urllib2.Request
@@ -119,26 +119,27 @@ def WPS(rawWord):  #return uk and password  【[url,uk],[url,uk]...,[url,uk]】
                 break
     return urlR
 
-def isAlive(ip,port):
-        proxy={'http':"http://"+ip+':'+port}
-        print proxy
-        header={'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/34.0.1847.137 Safari/537.36 LBBROWSER'  }  
-        proxy_support=urllib2.ProxyHandler(proxy)
-        opener=urllib2.build_opener(proxy_support)
-        urllib2.install_opener(opener)
-        test_url="http://www.qq.com"
-        req=urllib2.Request(test_url,headers=header)
-        try:
-            resp=urllib2.urlopen(req,timeout=10)
-            if resp.code==200:
-                print "work"
-                return True
-            else:
-                print "not work"
-                return False
-        except :
-            print "Not work"
-            return False
+
+def getHtmlP(url,ipPort):
+    proxy={'http':"http://"+ipPort}
+    try:
+        html=requests.get(url,headers=header,timeout=15,proxies=proxy).text
+    except httplib.IncompleteRead, e:
+        html = e.partial
+    except socket.timeout as e:
+        html=str(e)
+    except:
+        return 'null'
+    return html
+
+
+def isAlive(ipPort):
+    test_url="http://www.baidu.com/"
+    html=getHtmlP(test_url,ipPort)
+    if html.find('baidu')!=-1:
+        return True
+    else:
+        return False
     
 def S_Tebaidu(rawWord):
     Dict={'a':rawWord}
