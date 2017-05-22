@@ -3,6 +3,7 @@ import urllib2,re,cookielib,httplib,socket,urllib,random,time,requests
 from bs4 import BeautifulSoup
 header={'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/34.0.1847.137 Safari/537.36 LBBROWSER'  }  
 timeOut=8
+
 def getHtml(url):
     request=urllib2.Request(url,headers=header)
     urllib2.Request
@@ -12,6 +13,8 @@ def getHtml(url):
         html = e.partial
     except socket.timeout as e:
         html=str(e)
+    except:
+        return 'null'
     return html
 
 def isPageNull(url):
@@ -192,3 +195,14 @@ def S_Sobaidupan(rawWord):
     setList=set(ukList)
     resList=list(setList)
     return resList
+
+
+
+def hotList():
+    reg=r'<div class="cap">(.*?)</div>'
+    url='http://www.xl720.com/'
+    html=getHtml(url)
+    res=re.findall(reg,html,re.S)
+    tempSet=set(res)
+    title=list(tempSet)
+    return title

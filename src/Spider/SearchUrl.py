@@ -76,7 +76,7 @@ def writeMySQL(Q4):
                     continue
                 url=url[23:]
                 num=num+1
-                cur.execute('insert into taglist(title,url,uk) values(%s,%s,%s)',[item[0],url,item[2]])
+                cur.execute('insert into baiduyun.taglist(title,url,uk) values(%s,%s,%s)',[item[0],url,item[2]])
             cur.close()
             con.commit()
             
@@ -91,6 +91,34 @@ def queueSize(Q1,Q2,Q3,Q4):
         print 'Q4 size : '+str(Q4.qsize())
         time.sleep(60)
 
+
+def checkThread(iniNameList):
+    while True:
+        time.sleep(10)
+        nowNameList=[]
+        now=threading.enumerate()
+        #print 'now :'
+        #print now
+        for i in now:
+            nowNameList.append(i.getName())
+            
+        for j in iniNameList:
+            if j in nowNameList:
+                pass
+            else:
+                print "threading "+j+" stopped, now restart"
+                if j in ['t1','t2','t3']:
+                    t=threading.Thread(target=searchHome,args=(Q3,Q4,))
+                if j=='t4':
+                    t=threading.Thread(target=writeMySQL,args=(Q4,))
+                if j=='t5':
+                    t=threading.Thread(target=queueSize,args=(Q1,Q2,Q3,Q4,))
+                t.setName(j)
+                t.start()
+        time.sleep(300)
+
+
+
 Q1=Queue()
 Q2=Queue()
 Q3=Queue()
@@ -98,11 +126,34 @@ Q4=Queue()
 urlHome1='http://pan.baidu.com/share/home?uk='
 urlHome2='#category/type=0'
 if __name__=='__main__':
-    startNum=147812
+    
+    #startNum=178713
     con = mdb.connect(host = 'localhost',user = 'root',passwd = '123456',charset="utf8")
     con.select_db('baiduyun')
     cur=con.cursor()
-    cur.execute('select * from uklist where indez>=%s',startNum)
+    #update books.searchresult
+    cur.execute('select url from books.books_searchresult order by num desc limit 1')
+    res=cur.fetchone()
+    cur.execute('select id from baiduyun.taglist where url=%s',[str(res[0])])
+    num=cur.fetchone()[0]
+    cur.execute('insert into books.books_searchresult(title,url) select title,url from baiduyun.taglist where id>%s',[num])
+    
+    con.commit()
+
+    # get start number
+    cur.execute('select uk from baiduyun.taglist order by id desc limit 1000')
+    res=cur.fetchall()
+    res=list(set(res))
+    temp=[]
+    for i in res:
+        #temp.append(str(i[0]))
+        cur.execute('select indez from baiduyun.uklist where uk=%s',[str(i[0])])
+        indez=cur.fetchone()[0]
+        temp.append(indez)
+
+    startNum=max(temp)+1
+    
+    cur.execute('select * from baiduyun.uklist where indez>=%s',startNum)
     items=cur.fetchall()
     cur.close()
     
@@ -110,25 +161,37 @@ if __name__=='__main__':
         Q3.put(str(i[1]))
 
     threads=[]
+    iniNameList=['t1','t2','t3','t4','t5','t6']
+    t1=threading.Thread(target=searchHome,args=(Q3,Q4,))
+    t1.setName('t1')
+    threads.append(t1)
     
-    t4=threading.Thread(target=searchHome,args=(Q3,Q4,))
+    t2=threading.Thread(target=searchHome,args=(Q3,Q4,))
+    t2.setName('t2')
+    threads.append(t2)
+    
+    t3=threading.Thread(target=searchHome,args=(Q3,Q4,))
+    t3.setName('t3')
+    threads.append(t3)
+    
+    t4=threading.Thread(target=writeMySQL,args=(Q4,))
+    t4.setName('t4')
     threads.append(t4)
     
-    t5=threading.Thread(target=searchHome,args=(Q3,Q4,))
+    t5=threading.Thread(target=queueSize,args=(Q1,Q2,Q3,Q4,))
+    t5.setName('t5')
     threads.append(t5)
     
-    t6=threading.Thread(target=searchHome,args=(Q3,Q4,))
+    t6=threading.Thread(target=checkThread,args=(iniNameList,))
+    t6.setName('t6')
     threads.append(t6)
-    
-    t7=threading.Thread(target=writeMySQL,args=(Q4,))
-    threads.append(t7)
-    
-    t8=threading.Thread(target=queueSize,args=(Q1,Q2,Q3,Q4,))
-    threads.append(t8)
     
     for t in threads:
         t.setDaemon(True)
         t.start()
-
+        
     for t in threads:
         t.join()
+        
+    con.commit()
+    con.close()

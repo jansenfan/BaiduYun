@@ -1,8 +1,10 @@
 eclipse.preferences.version=1
+encoding//src/Spider/CiKu.py=utf-8
 encoding//src/Spider/Lib.py=utf-8
+encoding//src/Spider/SearchUrl.py=utf-8
 encoding//src/Spider/Source.py=utf-8
+encoding//src/Spider/XunLeiZhiJia.py=utf-8
 encoding//src/Spider/multiThreads.py=utf-8
 encoding//src/Spider/searchUK.py=utf-8
 encoding//src/Spider/singleThread.py=utf-8
 encoding//src/Spider/sortMySQL.py=utf-8
-encoding//src/Spider/test.py=utf-8
